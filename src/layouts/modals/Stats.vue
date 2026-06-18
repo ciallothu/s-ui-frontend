@@ -74,7 +74,7 @@ export default {
       loaded: false,
       alert: false,
       intervalId: <any>0,
-      limit: 1,
+	  limit: <number | string>1,
       periods: [
 		{ value: 'live', title: 'Live' },
         { value: 1, title: i18n.global.n(1) + i18n.global.t('date.h')},
