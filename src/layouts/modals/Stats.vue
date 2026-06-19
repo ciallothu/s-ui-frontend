@@ -76,7 +76,7 @@ export default {
       intervalId: <any>0,
 	  limit: <number | string>1,
       periods: [
-		{ value: 'live', title: 'Live' },
+		{ value: 'live', title: i18n.global.t('stats.live') },
         { value: 1, title: i18n.global.n(1) + i18n.global.t('date.h')},
         { value: 6, title: i18n.global.n(6) + i18n.global.t('date.h')},
         { value: 12, title: i18n.global.n(12) + i18n.global.t('date.h')},
@@ -145,7 +145,7 @@ export default {
       const data = await HttpUtils.get('api/stats', { resource: this.resource, tag: this.tag, limit: requestLimit })
       if (data.success && data.obj) {
         const obj = <any[]>data.obj
-        const l = String(i18n.global.locale) == 'fa' ? "fa-IR" : "en-US"
+		const l = this.dateLocale()
 		const oneStep = requestLimit * 3600 * 1000 / 360
         const now = new Date().getTime()
         const steps = <number[]>[]
@@ -215,6 +215,10 @@ export default {
         minute: '2-digit',
         hour12: false,
       })
+    },
+    dateLocale() {
+      const selected = String(i18n.global.locale.value)
+      return ({ zhHans: 'zh-CN', zhHant: 'zh-TW', fa: 'fa-IR', vi: 'vi-VN', ru: 'ru-RU', ja: 'ja-JP', fr: 'fr-FR', la: 'la' } as Record<string, string>)[selected] ?? 'en-US'
     },
   },
   watch: {

@@ -8,11 +8,11 @@
               <v-form @submit.prevent="login" ref="form">
                 <v-text-field v-model="username" :label="$t('login.username')" :rules="usernameRules" required></v-text-field>
                 <v-text-field v-model="password" :label="$t('login.password')" :rules="passwordRules" type="password" required></v-text-field>
-				<v-text-field v-if="requires2FA" v-model="otp" label="TOTP / Recovery code" autocomplete="one-time-code" autofocus required></v-text-field>
+				<v-text-field v-if="requires2FA" v-model="otp" :label="$t('auth.twoFactorCode')" autocomplete="one-time-code" autofocus required></v-text-field>
                 <v-btn :loading="loading" type="submit" color="primary" block class="mt-2" v-text="$t('actions.submit')"></v-btn>
               </v-form>
-			  <v-btn v-if="authMethods.passkey" :disabled="!username" :loading="loading" block variant="tonal" class="mt-2" prepend-icon="mdi-passkey" @click="passkeyLogin">Passkey</v-btn>
-			  <v-btn v-if="authMethods.oidc" :loading="loading" block variant="outlined" class="mt-2" prepend-icon="mdi-login-variant" @click="oidcLogin">OIDC / SSO</v-btn>
+			  <v-btn v-if="authMethods.passkey" :disabled="!username" :loading="loading" block variant="tonal" class="mt-2" prepend-icon="mdi-passkey" @click="passkeyLogin">{{ $t('auth.passkey') }}</v-btn>
+			  <v-btn v-if="authMethods.oidc" :loading="loading" block variant="outlined" class="mt-2" prepend-icon="mdi-login-variant" @click="oidcLogin">{{ $t('auth.oidcSso') }}</v-btn>
               <v-select
                 density="compact"
                 class="mt-2"

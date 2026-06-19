@@ -10,7 +10,7 @@
     <v-tab value="t2">{{ $t('setting.sub') }}</v-tab>
     <v-tab value="t3">{{ $t('setting.jsonSub') }}</v-tab>
     <v-tab value="t4">{{ $t('setting.clashSub') }}</v-tab>
-	<v-tab value="t5">Identity & Security</v-tab>
+	<v-tab value="t5">{{ $t('security.title') }}</v-tab>
   </v-tabs>
   <v-card-text>
     <v-row align="center" justify="center" style="margin-bottom: 10px;">
@@ -86,11 +86,11 @@
         </v-row>
 		<v-expand-transition>
 		  <v-card v-if="subShowInfo" variant="tonal" class="mb-4">
-			<v-card-title class="text-subtitle-1">Subscription user information fields</v-card-title>
+			<v-card-title class="text-subtitle-1">{{ $t('setting.subInfoFields') }}</v-card-title>
 			<v-card-text>
 			  <v-row>
 				<v-col v-for="item in subInfoItems" :key="item.key" cols="12" sm="6" md="4">
-				  <v-switch color="primary" v-model="item.model.value" :label="item.label" hide-details />
+				  <v-switch color="primary" v-model="item.model.value" :label="$t(item.labelKey)" hide-details />
 				</v-col>
 			  </v-row>
 			</v-card-text>
@@ -151,20 +151,20 @@
 
 	  <v-window-item value="t5">
 		<v-row>
-		  <v-col cols="12"><v-switch color="primary" v-model="oidcEnabled" label="Enable OIDC / SSO" hide-details /></v-col>
-		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcIssuer" label="OIDC issuer URL" hide-details /></v-col>
-		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcRedirectUrl" label="Redirect URL" hide-details /></v-col>
-		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcClientId" label="Client ID" hide-details /></v-col>
-		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcClientSecret" label="Client secret" type="password" hide-details /></v-col>
-		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcScopes" label="Scopes" hide-details /></v-col>
-		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcUsernameClaim" label="Username claim" hide-details /></v-col>
-		  <v-col cols="12"><v-textarea v-model="settings.oidcAllowedUsers" label="Allowed OIDC identities (comma or newline separated)" rows="2" hide-details /></v-col>
+		  <v-col cols="12"><v-switch color="primary" v-model="oidcEnabled" :label="$t('setting.identity.enableOidc')" hide-details /></v-col>
+		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcIssuer" :label="$t('setting.identity.oidcIssuer')" hide-details /></v-col>
+		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcRedirectUrl" :label="$t('setting.identity.oidcRedirect')" hide-details /></v-col>
+		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcClientId" :label="$t('setting.identity.oidcClientId')" hide-details /></v-col>
+		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcClientSecret" :label="$t('setting.identity.oidcClientSecret')" type="password" hide-details /></v-col>
+		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcScopes" :label="$t('setting.identity.oidcScopes')" hide-details /></v-col>
+		  <v-col cols="12" md="6"><v-text-field v-model="settings.oidcUsernameClaim" :label="$t('setting.identity.oidcUsernameClaim')" hide-details /></v-col>
+		  <v-col cols="12"><v-textarea v-model="settings.oidcAllowedUsers" :label="$t('setting.identity.oidcAllowedUsers')" rows="2" hide-details /></v-col>
 		</v-row>
 		<v-divider class="my-5" />
 		<v-row>
-		  <v-col cols="12"><v-switch color="primary" v-model="passkeyEnabled" label="Enable WebAuthn passkeys" hide-details /></v-col>
-		  <v-col cols="12" md="6"><v-text-field v-model="settings.passkeyRpId" label="Relying Party ID (domain only)" hide-details /></v-col>
-		  <v-col cols="12" md="6"><v-text-field v-model="settings.passkeyOrigins" label="Allowed origins (comma separated)" hint="https://panel.example.com" persistent-hint /></v-col>
+		  <v-col cols="12"><v-switch color="primary" v-model="passkeyEnabled" :label="$t('setting.identity.enablePasskeys')" hide-details /></v-col>
+		  <v-col cols="12" md="6"><v-text-field v-model="settings.passkeyRpId" :label="$t('setting.identity.passkeyRpId')" :hint="$t('setting.identity.passkeyOriginHint')" persistent-hint /></v-col>
+		  <v-col cols="12" md="6"><v-text-field v-model="settings.passkeyOrigins" :label="$t('setting.identity.passkeyOrigins')" hint="https://panel.example.com" persistent-hint /></v-col>
 		</v-row>
 	  </v-window-item>
     </v-window>
@@ -313,11 +313,11 @@ const subInfoRemaining = boolSetting('subInfoRemaining')
 const oidcEnabled = boolSetting('oidcEnabled')
 const passkeyEnabled = boolSetting('passkeyEnabled')
 const subInfoItems = [
-  { key: 'upload', label: 'Upload usage', model: subInfoUpload },
-  { key: 'download', label: 'Download usage', model: subInfoDownload },
-  { key: 'total', label: 'Traffic quota', model: subInfoTotal },
-  { key: 'expire', label: 'Expiry', model: subInfoExpire },
-  { key: 'remaining', label: 'Remaining quota in node name', model: subInfoRemaining },
+  { key: 'upload', labelKey: 'setting.subInfoUpload', model: subInfoUpload },
+  { key: 'download', labelKey: 'setting.subInfoDownload', model: subInfoDownload },
+  { key: 'total', labelKey: 'setting.subInfoTotal', model: subInfoTotal },
+  { key: 'expire', labelKey: 'setting.subInfoExpire', model: subInfoExpire },
+  { key: 'remaining', labelKey: 'setting.subInfoRemaining', model: subInfoRemaining },
 ]
 
 const webPort = computed({

@@ -7,34 +7,36 @@
     </v-col>
   </v-row>
 	<input ref="databaseInput" type="file" accept=".db,application/x-sqlite3" hidden @change="restoreDatabase" />
-	<v-dialog v-model="resultVisible" max-width="720"><v-card :title="resultTitle"><v-card-text><pre class="tool-result">{{ resultText }}</pre></v-card-text><v-card-actions><v-spacer /><v-btn color="primary" @click="resultVisible = false">Close</v-btn></v-card-actions></v-card></v-dialog>
+	<v-dialog v-model="resultVisible" max-width="720"><v-card :title="resultTitle"><v-card-text><pre class="tool-result">{{ resultText }}</pre></v-card-text><v-card-actions><v-spacer /><v-btn color="primary" @click="resultVisible = false">{{ $t('actions.close') }}</v-btn></v-card-actions></v-card></v-dialog>
 </template>
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import HttpUtils from '@/plugins/httputil'
-const resultVisible = ref(false), resultTitle = ref('Result'), resultText = ref('')
+import { i18n } from '@/locales'
+const t = (key: string, params?: any) => i18n.global.t(key, params)
+const resultVisible = ref(false), resultTitle = ref(t('tools.result')), resultText = ref('')
 const databaseInput = ref<HTMLInputElement | null>(null)
 const download = (path: string) => window.open(path, '_blank', 'noopener')
-const restart = async (target: 'restartSb' | 'restartApp') => { if (window.confirm('The service will be briefly unavailable. Continue?')) await HttpUtils.post(`api/${target}`, {}) }
+const restart = async (target: 'restartSb' | 'restartApp') => { if (window.confirm(t('tools.serviceUnavailableConfirm'))) await HttpUtils.post(`api/${target}`, {}) }
 const showResult = (title: string, value: any) => { resultTitle.value = title; resultText.value = typeof value === 'string' ? value : JSON.stringify(value, null, 2); resultVisible.value = true }
 const promptTool = async (endpoint: string, label: string) => { const value = window.prompt(label); if (!value) return; const response = await HttpUtils.post(`api/${endpoint}`, { link: value }); if (response.success) showResult(label, response.obj) }
-const keypair = async () => { const type = window.prompt('Key type: reality, wireguard, tls or ech', 'reality'); if (!type) return; const options = window.prompt('Options / server name (optional)', '') ?? ''; const response = await HttpUtils.get('api/keypairs', { k: type, o: options }); if (response.success) showResult(`${type} key pair`, response.obj) }
-const restoreDatabase = async (event: Event) => { const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file || !window.confirm('Restore this database and replace the current panel data?')) { input.value = ''; return }; const form = new FormData(); form.append('db', file); await HttpUtils.post('api/importdb', form); input.value = '' }
-const groups = [
-  { title: 'Backup & restore', items: [
-    { title: 'Download database', subtitle: 'Full panel backup', icon: 'mdi-database-export-outline', action: () => download('api/getdb') },
-	{ title: 'Restore database', subtitle: 'Replace panel data from a backup', icon: 'mdi-database-import-outline', action: () => databaseInput.value?.click() },
-    { title: 'Download sing-box config', subtitle: 'Generated runtime JSON', icon: 'mdi-code-json', action: () => download('api/singbox-config') },
+const keypair = async () => { const type = window.prompt(t('tools.keyType'), 'reality'); if (!type) return; const options = window.prompt(t('tools.keyOptions'), '') ?? ''; const response = await HttpUtils.get('api/keypairs', { k: type, o: options }); if (response.success) showResult(t('tools.keyPair', { type }), response.obj) }
+const restoreDatabase = async (event: Event) => { const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file || !window.confirm(t('tools.restoreDatabaseConfirm'))) { input.value = ''; return }; const form = new FormData(); form.append('db', file); await HttpUtils.post('api/importdb', form); input.value = '' }
+const groups = computed(() => [
+  { title: t('tools.backupRestore'), items: [
+    { title: t('tools.downloadDatabase'), subtitle: t('tools.fullBackup'), icon: 'mdi-database-export-outline', action: () => download('api/getdb') },
+	{ title: t('tools.restoreDatabase'), subtitle: t('tools.restoreBackupSubtitle'), icon: 'mdi-database-import-outline', action: () => databaseInput.value?.click() },
+    { title: t('tools.downloadSingboxConfig'), subtitle: t('tools.generatedRuntimeJson'), icon: 'mdi-code-json', action: () => download('api/singbox-config') },
   ]},
-  { title: 'Conversion & keys', items: [
-    { title: 'Share link converter', subtitle: 'Convert a proxy link to an outbound', icon: 'mdi-swap-horizontal', action: () => promptTool('linkConvert', 'Share link') },
-    { title: 'Subscription converter', subtitle: 'Import an external subscription', icon: 'mdi-playlist-plus', action: () => promptTool('subConvert', 'Subscription URL') },
-	{ title: 'Generate key pairs', subtitle: 'Reality, WireGuard, TLS and ECH', icon: 'mdi-key-star', action: keypair },
+  { title: t('tools.conversionKeys'), items: [
+    { title: t('tools.shareLinkConverter'), subtitle: t('tools.shareLinkSubtitle'), icon: 'mdi-swap-horizontal', action: () => promptTool('linkConvert', t('tools.shareLink')) },
+    { title: t('tools.subscriptionConverter'), subtitle: t('tools.subscriptionSubtitle'), icon: 'mdi-playlist-plus', action: () => promptTool('subConvert', t('tools.subscriptionUrl')) },
+	{ title: t('tools.generateKeyPairs'), subtitle: t('tools.keyPairsSubtitle'), icon: 'mdi-key-star', action: keypair },
   ]},
-  { title: 'Service actions', items: [
-    { title: 'Restart sing-box', subtitle: 'Reload core configuration', icon: 'mdi-restart', action: () => restart('restartSb') },
-    { title: 'Restart S-UI', subtitle: 'Restart the panel process', icon: 'mdi-power', action: () => restart('restartApp') },
+  { title: t('tools.serviceActions'), items: [
+    { title: t('tools.restartSingbox'), subtitle: t('tools.restartSingboxSubtitle'), icon: 'mdi-restart', action: () => restart('restartSb') },
+    { title: t('tools.restartPanel'), subtitle: t('tools.restartPanelSubtitle'), icon: 'mdi-power', action: () => restart('restartApp') },
   ]},
-]
+])
 </script>
 <style scoped>.tool-result { white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }</style>

@@ -1,4 +1,5 @@
 import api from './api'
+import { i18n } from '@/locales'
 
 const decode = (value: string): ArrayBuffer => {
   const base64 = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4)
@@ -53,23 +54,41 @@ const serialize = (credential: PublicKeyCredential): any => {
 
 const unwrap = (response: any) => {
   const value = response.data
-  if (!value?.success) throw new Error(value?.msg || 'WebAuthn request failed')
+  if (!value?.success) throw new Error(value?.msg || i18n.global.t('security.webauthnFailed'))
   return value.obj
 }
 
-export async function registerPasskey(name = 'Passkey') {
+const passkeyName = (credential: PublicKeyCredential): string => {
+  const response: any = credential.response
+  const transports: string[] = typeof response.getTransports === 'function' ? response.getTransports() : []
+  const attachment = credential.authenticatorAttachment
+  const ua = navigator.userAgent.toLowerCase()
+  const platform = ((navigator as any).userAgentData?.platform ?? navigator.platform ?? '').toLowerCase()
+  if (transports.some(item => ['usb', 'nfc', 'ble', 'hybrid'].includes(item))) return i18n.global.t('security.securityKey')
+  if (attachment === 'platform') {
+    if (/iphone|ipad|mac|ios/.test(platform) || /safari/.test(ua) && !/chrome|chromium|edg\//.test(ua)) return i18n.global.t('security.icloudKeychain')
+    if (/android/.test(platform) || /android/.test(ua) || /chrome|chromium/.test(ua)) return i18n.global.t('security.googlePasswordManager')
+    if (/windows/.test(platform) || /windows/.test(ua)) return i18n.global.t('security.windowsHello')
+    return i18n.global.t('security.platformPasskey')
+  }
+  return i18n.global.t('security.passkey')
+}
+
+export async function registerPasskey(name = '') {
   const begin = unwrap(await api.get('api/passkey-register-begin'))
   const credential = await navigator.credentials.create({ publicKey: publicKeyOptions(begin.options, true) as PublicKeyCredentialCreationOptions }) as PublicKeyCredential | null
-  if (!credential) throw new Error('Passkey registration was cancelled')
-  unwrap(await api.post(`api/passkey-register-finish?sessionId=${encodeURIComponent(begin.sessionId)}&name=${encodeURIComponent(name)}`, serialize(credential), {
+  if (!credential) throw new Error(i18n.global.t('security.passkeyCancelled'))
+  const finalName = name || passkeyName(credential)
+  unwrap(await api.post(`api/passkey-register-finish?sessionId=${encodeURIComponent(begin.sessionId)}&name=${encodeURIComponent(finalName)}`, serialize(credential), {
     headers: { 'Content-Type': 'application/json', 'X-WebAuthn-Session': begin.sessionId },
   }))
+  return finalName
 }
 
 export async function loginWithPasskey(username: string) {
   const begin = unwrap(await api.get('api/passkey-login-begin', { params: { username } }))
   const credential = await navigator.credentials.get({ publicKey: publicKeyOptions(begin.options, false) as PublicKeyCredentialRequestOptions }) as PublicKeyCredential | null
-  if (!credential) throw new Error('Passkey login was cancelled')
+  if (!credential) throw new Error(i18n.global.t('security.loginCancelled'))
   return unwrap(await api.post(`api/passkey-login-finish?sessionId=${encodeURIComponent(begin.sessionId)}`, serialize(credential), {
     headers: { 'Content-Type': 'application/json', 'X-WebAuthn-Session': begin.sessionId },
   }))
