@@ -58,7 +58,6 @@ const menu = [
   { title: 'pages.tls', icon: 'mdi-certificate',  path: '/tls' },
 	{ title: 'pages.config', icon: 'mdi-tune-variant',  path: '/config' },
 	{ title: 'pages.analytics', icon: 'mdi-chart-line',  path: '/analytics' },
-	{ title: 'pages.logs', icon: 'mdi-text-box-search-outline',  path: '/logs' },
   { title: 'pages.admins', icon: 'mdi-account-tie',  path: '/admins' },
   { title: 'pages.settings', icon: 'mdi-cog',  path: '/settings' },
 ]

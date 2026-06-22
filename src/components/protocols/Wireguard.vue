@@ -5,8 +5,22 @@
     <v-card-title>{{ $t('types.wg.serverSection') }}</v-card-title>
     <v-card-text>
       <v-row>
-        <v-col cols="12" md="8"><v-text-field v-model="data.private_key" :label="$t('types.wg.serverPrivateKey')" append-inner-icon="mdi-key-star" @click:append-inner="newKey" /></v-col>
-        <v-col cols="12" md="8"><v-text-field v-model="publicKey" readonly :label="$t('types.wg.serverPublicKey')" append-inner-icon="mdi-refresh" @click:append-inner="getWgPubKey" /></v-col>
+        <v-col cols="12" md="8">
+          <v-text-field v-model="data.private_key" type="password" :label="$t('types.wg.serverPrivateKey')" :hint="$t('types.wg.privateKeyExportHint')" persistent-hint>
+            <template #append-inner>
+              <v-btn icon="mdi-content-copy" size="small" variant="text" :disabled="!canCopy(data.private_key)" :title="$t('types.wg.copySecret')" @click.stop="copySecret(data.private_key)" />
+              <v-btn icon="mdi-key-star" size="small" variant="text" :title="$t(data.private_key || data.private_key_set ? 'types.wg.regenerateKeyPair' : 'types.wg.generateKeyPair')" @click.stop="newKey" />
+            </template>
+          </v-text-field>
+        </v-col>
+        <v-col cols="12" md="8">
+          <v-text-field v-model="publicKey" readonly :label="$t('types.wg.serverPublicKey')">
+            <template #append-inner>
+              <v-btn icon="mdi-content-copy" size="small" variant="text" :disabled="!publicKey" :title="$t('types.wg.copySecret')" @click.stop="copySecret(publicKey)" />
+              <v-btn icon="mdi-refresh" size="small" variant="text" :title="$t('types.wg.regenerateKeyPair')" @click.stop="getWgPubKey" />
+            </template>
+          </v-text-field>
+        </v-col>
         <v-col cols="12" md="6"><v-text-field v-model="serverIPv4" :label="$t('types.wg.serverIpv4')" hint="/32" persistent-hint /></v-col>
         <v-col cols="12" md="6"><v-text-field v-model="serverIPv6" :label="$t('types.wg.serverIpv6')" hint="/128" persistent-hint /></v-col>
         <v-col cols="12" md="6"><v-text-field v-model="data.tunnel_ipv4_cidr" :label="$t('types.wg.tunnelIpv4')" hint="10.66.66.0/24" persistent-hint /></v-col>
@@ -37,7 +51,7 @@
     <v-card-title>{{ $t('types.wg.runtimeSection') }}</v-card-title>
     <v-card-text>
       <v-row>
-        <v-col cols="12" md="6"><v-switch v-model="data.peer_to_peer_enabled" color="primary" :label="$t('types.wg.peerToPeer')" :hint="$t('types.wg.peerToPeerHelp')" persistent-hint /></v-col>
+        <v-col cols="12" md="6"><v-switch v-model="hubPeerForwarding" color="primary" :label="$t('types.wg.peerToPeer')" :hint="$t('types.wg.peerToPeerHelp')" persistent-hint /></v-col>
         <v-col cols="12" md="6"><v-switch v-model="data.system" color="primary" :label="$t('types.wg.sysIf')" /></v-col>
         <v-col cols="12" md="6" v-if="data.system"><v-text-field v-model="interfaceName" :label="$t('types.wg.ifName')" /></v-col>
         <v-col cols="12" v-if="data.system"><v-alert type="warning" variant="tonal" :text="$t('types.wg.systemHelp')" /></v-col>
@@ -74,9 +88,11 @@ export default {
   created() { this.ensureDefaults() },
   methods: {
     ensureDefaults() {
-      this.data.wireguard_schema = 2
+      this.data.wireguard_schema = 3
       this.data.system ??= false
       this.data.peer_to_peer_enabled ??= false
+      this.data.hub_peer_forwarding_enabled ??= this.data.peer_to_peer_enabled
+      this.data.peer_to_peer_enabled = this.data.hub_peer_forwarding_enabled
       this.data.peers ??= []
       this.data.ext ??= { keys: [] }
       this.data.ext.keys ??= []
@@ -90,8 +106,12 @@ export default {
     delPeer(index: number) { this.$emit('delPeer', index) },
     refreshPeerKey(index: number) { this.$emit('refreshPeerKey', index) },
     newKey() { this.$emit('newWgKey') },
+    canCopy(value: string) { return Boolean(value) && value !== '[redacted]' && !String(value).includes('•') },
+    async copySecret(value: string) {
+      if (this.canCopy(value)) await navigator.clipboard.writeText(value)
+    },
     getWgPubKey() {
-      if (this.data.private_key) this.$emit('getWgPubKey', this.data.private_key)
+      if (this.canCopy(this.data.private_key)) this.$emit('getWgPubKey', this.data.private_key)
     },
     addressFor(ipv6: boolean) {
       return (this.data.address || []).find((value: string) => ipv6 ? value.includes(':') : !value.includes(':')) || ''
@@ -107,6 +127,13 @@ export default {
     publicKey: {
       get() { return this.data.ext?.public_key || '' },
       set(value: string) { this.data.ext.public_key = value },
+    },
+    hubPeerForwarding: {
+      get() { return this.data.hub_peer_forwarding_enabled ?? this.data.peer_to_peer_enabled ?? false },
+      set(value: boolean) {
+        this.data.hub_peer_forwarding_enabled = value
+        this.data.peer_to_peer_enabled = value
+      },
     },
     interfaceName: {
       get() { return this.data.name || '' },

@@ -1,29 +1,32 @@
 <template>
-  <v-card subtitle="Warp">
+  <v-card :subtitle="$t('types.warp.title')">
     <template v-if="data.id>0">
       <table dir="ltr" width="100%">
         <tbody>
           <tr>
-            <td>Device ID</td>
-            <td>{{ data.ext.device_id }}</td>
+            <td>{{ $t('types.warp.deviceId') }}</td>
+            <td>{{ data.ext?.device_id }}</td>
           </tr>
           <tr>
-            <td>Access Token</td>
-            <td>{{ data.ext.access_token }}</td>
+            <td>{{ $t('types.warp.accessToken') }}</td>
+            <td>{{ data.ext?.access_token }}</td>
           </tr>
           <tr>
             <td>{{ $t('types.wg.privKey') }}</td>
-            <td>{{ data.private_key }}</td>
+            <td>
+              {{ data.private_key }}
+              <v-btn icon="mdi-content-copy" size="x-small" variant="text" :disabled="!data.private_key" @click.stop="copyValue(data.private_key)" />
+            </td>
           </tr>
           <tr>
             <td>{{ $t('types.wg.localIp') }}</td>
-            <td>{{ data.address.join(',') }}</td>
+            <td>{{ addressList }}</td>
           </tr>
           <tr>
             <td colspan="2">
               <v-text-field
                 v-model="data.ext.license_key"
-                label="License Key"
+                :label="$t('types.warp.licenseKey')"
                 hide-details>
               </v-text-field>
             </td>
@@ -53,15 +56,25 @@
           <tbody>
             <tr>
               <td>{{ $t('types.wg.pubKey') }}</td>
-              <td>{{ data.peers[0].public_key }}</td>
+              <td>
+                {{ data.peers[0].public_key }}
+                <v-btn icon="mdi-content-copy" size="x-small" variant="text" :disabled="!data.peers[0].public_key" @click.stop="copyValue(data.peers[0].public_key)" />
+              </td>
+            </tr>
+            <tr v-if="data.peers?.[0]?.pre_shared_key">
+              <td>{{ $t('types.wg.psk') }}</td>
+              <td>
+                {{ data.peers[0].pre_shared_key }}
+                <v-btn icon="mdi-content-copy" size="x-small" variant="text" :disabled="!data.peers[0].pre_shared_key" @click.stop="copyValue(data.peers[0].pre_shared_key)" />
+              </td>
             </tr>
             <tr>
               <td>{{ $t('types.wg.allowedIp') }}</td>
-              <td>{{ data.peers[0].allowed_ips.join(',') }}</td>
+              <td>{{ (data.peers?.[0]?.allowed_ips || []).join(',') }}</td>
             </tr>
             <tr>
-              <td>Reserved</td>
-              <td>[{{ data.peers[0].reserved.join(',') }}]</td>
+              <td>{{ $t('types.warp.reserved') }}</td>
+              <td>[{{ (data.peers?.[0]?.reserved || []).join(',') }}]</td>
             </tr>
           </tbody>
         </table>
@@ -70,7 +83,7 @@
     <v-row>
       <v-col cols="12" sm="6" md="4" v-if="data.udp_timeout != undefined">
         <v-text-field
-          label="UDP Timeout"
+          :label="$t('types.wg.udpTimeout')"
           hide-details
           type="number"
           min=0
@@ -80,7 +93,7 @@
       </v-col>
       <v-col cols="12" sm="6" md="4" v-if="data.workers != undefined">
         <v-text-field
-        :label="$t('types.wg.worker')"
+          :label="$t('types.wg.worker')"
           hide-details
           type="number"
           min=1
@@ -118,7 +131,7 @@
         <v-card>
           <v-list>
             <v-list-item>
-              <v-switch v-model="optionUdp" color="primary" label="UDP Timeout" hide-details></v-switch>
+              <v-switch v-model="optionUdp" color="primary" :label="$t('types.wg.udpTimeout')" hide-details></v-switch>
             </v-list-item>
             <v-list-item>
               <v-switch v-model="optionWorker" color="primary" :label="$t('types.wg.worker')" hide-details></v-switch>
@@ -137,14 +150,27 @@
 
 export default {
   props: ['data'],
+  created() {
+    this.$props.data.ext ??= {}
+    this.$props.data.peers ??= [{ address: '', port: 0, public_key: '', pre_shared_key: '', reserved: [], allowed_ips: [] }]
+    this.$props.data.peers[0] ??= { address: '', port: 0, public_key: '', pre_shared_key: '', reserved: [], allowed_ips: [] }
+    this.$props.data.peers[0].reserved ??= []
+    this.$props.data.peers[0].allowed_ips ??= []
+  },
   data() {
     return {
       menu: false,
     }
   },
   methods: {
+    async copyValue(value: string) {
+      if (value) await navigator.clipboard.writeText(value)
+    },
   },
   computed: {
+    addressList() {
+      return (this.$props.data.address || []).join(',')
+    },
     optionUdp: {
       get(): boolean { return this.$props.data.udp_timeout != undefined },
       set(v:boolean) { this.$props.data.udp_timeout = v ? "5m" : undefined }

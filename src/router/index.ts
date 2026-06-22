@@ -61,8 +61,7 @@ const routes = [
       },
       {
 		path: '/logs',
-		name: 'pages.logs',
-		component: () => import('@/views/Logs.vue'),
+		redirect: '/analytics',
       },
       {
         path: '/admins',

@@ -4,12 +4,14 @@
       <v-tab value="usage">{{ $t('analytics.userUsage') }}</v-tab>
       <v-tab value="stats">{{ $t('analytics.trafficTrends') }}</v-tab>
       <v-tab value="connections">{{ $t('analytics.connections') }}</v-tab>
+      <v-tab value="logs">{{ $t('logsView.title') }}</v-tab>
     </v-tabs>
     <v-card-text>
       <v-row dense>
         <v-col cols="12" md="3"><v-text-field v-model="search" :label="$t('analytics.search')" prepend-inner-icon="mdi-magnify" clearable @keyup.enter="load" /></v-col>
         <v-col cols="12" md="2"><v-text-field v-model="tag" :label="tagLabel" clearable @keyup.enter="load" /></v-col>
-        <v-col v-if="tab !== 'usage'" cols="12" md="2"><v-select v-model="resource" :label="$t('analytics.resource')" :items="resources" /></v-col>
+        <v-col v-if="tab === 'stats' || tab === 'connections'" cols="12" md="2"><v-select v-model="resource" :label="$t('analytics.resource')" :items="resources" /></v-col>
+        <v-col v-if="tab === 'logs'" cols="12" md="2"><v-select v-model="logLevel" :label="$t('logsView.level')" :items="levels" @update:model-value="load" /></v-col>
         <v-col cols="12" md="2"><v-text-field v-model="start" :label="$t('analytics.from')" type="date" /></v-col>
         <v-col cols="12" md="2"><v-text-field v-model="end" :label="$t('analytics.to')" type="date" /></v-col>
         <v-col cols="12" md="1" class="d-flex align-center"><v-btn block color="primary" @click="load">{{ $t('analytics.apply') }}</v-btn></v-col>
@@ -57,7 +59,22 @@
             <thead><tr><th>{{ $t('logsView.time') }}</th><th>{{ $t('analytics.resource') }}</th><th>{{ $t('analytics.user') }}</th><th>{{ $t('analytics.remote') }}</th><th>{{ $t('analytics.event') }}</th></tr></thead>
             <tbody>
               <tr v-for="(item, index) in connectionItems" :key="`${item.timestamp}-${index}`">
-                <td>{{ item.time || formatTime(item.timestamp) }}</td><td>{{ item.resource }}/{{ item.protocol }}[{{ item.tag }}]</td><td>{{ item.user || '—' }}</td><td>{{ item.remote || '—' }}</td><td class="log-message">{{ item.event }}</td>
+                <td>{{ item.time || formatTime(item.timestamp) }}</td><td>{{ item.resource }}/{{ item.protocol }}[{{ item.tag }}]</td><td>{{ item.user || '—' }}</td><td>{{ item.destination || item.source || item.remote || '—' }}</td><td><v-btn size="small" variant="text" @click="openConnectionLog(item)">{{ $t('analytics.viewLog') }}</v-btn></td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-window-item>
+        <v-window-item value="logs">
+          <v-alert type="info" variant="tonal" class="my-3">{{ $t('logsView.subtitle') }}</v-alert>
+          <v-alert v-if="!loading && logItems.length === 0" type="info" variant="tonal">{{ $t('logsView.noLogs') }}</v-alert>
+          <v-table v-else density="compact" hover fixed-header height="calc(100vh - 330px)">
+            <thead><tr><th>{{ $t('logsView.time') }}</th><th>{{ $t('logsView.level') }}</th><th>{{ $t('logsView.user') }}</th><th>{{ $t('logsView.source') }}</th><th>{{ $t('logsView.message') }}</th></tr></thead>
+            <tbody>
+              <tr v-for="(item, index) in logItems" :key="`${item.timestamp}-${index}`">
+                <td class="text-no-wrap">{{ item.time || formatTime(item.timestamp) }}</td>
+                <td><v-chip size="small" :color="levelColor(item.level)" variant="tonal">{{ item.level }}</v-chip></td>
+                <td>{{ item.user || '—' }}</td><td>{{ item.source || 'system' }}</td>
+                <td class="log-message">{{ item.message }}</td>
               </tr>
             </tbody>
           </v-table>
@@ -71,19 +88,39 @@
       <v-card-text>
         <v-alert v-if="detailItems.length === 0" type="info" variant="tonal">{{ $t('analytics.noConnections') }}</v-alert>
         <v-table v-else density="compact" hover fixed-header height="560">
-          <thead><tr><th>{{ $t('logsView.time') }}</th><th>{{ $t('analytics.resource') }}</th><th>{{ $t('analytics.user') }}</th><th>{{ $t('analytics.remote') }}</th><th>{{ $t('analytics.message') }}</th></tr></thead>
+          <thead><tr><th>{{ $t('logsView.time') }}</th><th>{{ $t('analytics.resource') }}</th><th>{{ $t('analytics.user') }}</th><th>{{ $t('analytics.destination') }}</th><th>{{ $t('analytics.source') }}</th><th>{{ $t('analytics.message') }}</th></tr></thead>
           <tbody>
-            <tr v-for="(item, index) in detailItems" :key="`${item.timestamp}-${index}`">
+            <tr v-for="(item, index) in detailItems" :key="`${item.timestamp}-${index}`" @click="openConnectionLog(item)" class="cursor-pointer">
               <td class="text-no-wrap">{{ item.time || formatTime(item.timestamp) }}</td>
               <td>{{ item.resource }}/{{ item.protocol }}[{{ item.tag }}]</td>
               <td>{{ item.user || '—' }}</td>
-              <td>{{ item.remote || '—' }}</td>
+              <td>{{ item.destination || '—' }}</td>
+              <td>{{ item.source || '—' }}</td>
               <td class="log-message">{{ item.message }}</td>
             </tr>
           </tbody>
         </v-table>
       </v-card-text>
       <v-card-actions><v-spacer /><v-btn color="primary" @click="detailVisible = false">{{ $t('actions.close') }}</v-btn></v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <v-dialog v-model="connectionLogVisible" max-width="880">
+    <v-card :title="$t('analytics.connectionLog')">
+      <v-card-text v-if="selectedConnection">
+        <v-row dense>
+          <v-col cols="12" md="6"><strong>{{ $t('logsView.time') }}:</strong> {{ selectedConnection.time || formatTime(selectedConnection.timestamp) }}</v-col>
+          <v-col cols="12" md="6"><strong>{{ $t('analytics.resource') }}:</strong> {{ selectedConnection.resource }}/{{ selectedConnection.protocol }}[{{ selectedConnection.tag }}]</v-col>
+          <v-col cols="12" md="6"><strong>{{ $t('analytics.user') }}:</strong> {{ selectedConnection.user || '—' }}</v-col>
+          <v-col cols="12" md="6"><strong>{{ $t('analytics.destination') }}:</strong> {{ selectedConnection.destination || '—' }}</v-col>
+          <v-col cols="12" md="6"><strong>{{ $t('analytics.source') }}:</strong> {{ selectedConnection.source || '—' }}</v-col>
+          <v-col cols="12" md="6"><strong>{{ $t('analytics.remote') }}:</strong> {{ selectedConnection.remote || '—' }}</v-col>
+        </v-row>
+        <v-divider class="my-4" />
+        <div class="text-medium-emphasis mb-2">{{ $t('logsView.message') }}</div>
+        <pre class="log-message">{{ selectedConnection.message }}</pre>
+      </v-card-text>
+      <v-card-actions><v-spacer /><v-btn color="primary" @click="connectionLogVisible = false">{{ $t('actions.close') }}</v-btn></v-card-actions>
     </v-card>
   </v-dialog>
 </template>
@@ -98,11 +135,14 @@ import { i18n } from '@/locales'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
 const t = (key: string, params?: any) => i18n.global.t(key, params)
-const tab = ref('usage'), loading = ref(false), search = ref(''), tag = ref(''), resource = ref('all')
+const tab = ref('usage'), loading = ref(false), search = ref(''), tag = ref(''), resource = ref('all'), logLevel = ref('ALL')
 const start = ref(new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)), end = ref(new Date().toISOString().slice(0, 10))
 const usageItems = ref<any[]>([]), statItems = ref<any[]>([]), usage = ref<any>({ upload: 0, download: 0 })
 const connectionData = ref<any>({ items: [], summary: {}, scanned: 0 })
+const logItems = ref<any[]>([])
 const detailVisible = ref(false), detailTitle = ref(''), detailItems = ref<any[]>([])
+const connectionLogVisible = ref(false), selectedConnection = ref<any>(null)
+const levels = ['ALL', 'DEBUG', 'INFO', 'WARNING', 'ERROR']
 const resources = computed(() => [
   { title: t('analytics.users'), value: 'user' },
   { title: t('analytics.inbounds'), value: 'inbound' },
@@ -111,7 +151,7 @@ const resources = computed(() => [
   { title: t('analytics.destinations'), value: 'destination' },
   { title: t('all'), value: 'all' },
 ])
-const tagLabel = computed(() => tab.value === 'usage' ? t('analytics.user') : t('analytics.tag'))
+const tagLabel = computed(() => tab.value === 'usage' || tab.value === 'logs' ? t('analytics.user') : t('analytics.tag'))
 const unix = (value: string, last = false) => Math.floor(new Date(`${value}T${last ? '23:59:59' : '00:00:00'}`).getTime() / 1000)
 const query = (limit = 2000) => ({ search: search.value, start: unix(start.value), end: unix(end.value, true), limit })
 const load = async () => {
@@ -123,9 +163,12 @@ const load = async () => {
     } else if (tab.value === 'stats') {
       const response = await HttpUtils.get('api/analytics-stats', { ...query(2000), tag: tag.value, resource: resource.value })
       if (response.success) statItems.value = response.obj?.items ?? []
-    } else {
+    } else if (tab.value === 'connections') {
       const response = await HttpUtils.get('api/analytics-connections', { ...query(500), tag: tag.value, resource: resource.value })
       if (response.success) connectionData.value = response.obj ?? { items: [], summary: {}, scanned: 0 }
+    } else {
+      const response = await HttpUtils.get('api/structured-logs', { level: logLevel.value, user: tag.value, search: search.value, start: unix(start.value), end: unix(end.value, true), limit: 1000 })
+      if (response.success) logItems.value = response.obj?.items ?? []
     }
   } finally {
     loading.value = false
@@ -152,6 +195,7 @@ const connectionGroups = computed(() => {
 const chartOptions: any = { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index' }, scales: { y: { beginAtZero: true, ticks: { callback: (value: any) => bytes(value) } } } }
 const bytes = (value: any) => HumanReadable.sizeFormat(Number(value || 0))
 const formatTime = (value: number) => value ? new Date(value * 1000).toLocaleString() : '—'
+const levelColor = (value: string) => ({ DEBUG: 'secondary', INFO: 'info', WARNING: 'warning', ERROR: 'error' } as any)[value] ?? 'default'
 const openConnections = async (nextResource: string, nextTag: string) => {
   detailTitle.value = `${t('analytics.connectionDetails')} · ${nextResource}/${nextTag}`
   detailVisible.value = true
@@ -159,10 +203,15 @@ const openConnections = async (nextResource: string, nextTag: string) => {
   const response = await HttpUtils.get('api/analytics-connections', { ...query(500), resource: nextResource, tag: nextTag })
   if (response.success) detailItems.value = response.obj?.items ?? []
 }
+const openConnectionLog = (item: any) => {
+  selectedConnection.value = item
+  connectionLogVisible.value = true
+}
 watch(tab, () => { if (tab.value === 'usage') resource.value = 'all'; load() })
 onMounted(load)
 </script>
 
 <style scoped>
 .log-message { white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.cursor-pointer { cursor: pointer; }
 </style>

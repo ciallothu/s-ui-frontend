@@ -1,5 +1,5 @@
 <template>
-  <v-card subtitle="Talescale">
+  <v-card subtitle="Tailscale">
     <v-row>
       <v-col cols="12" sm="6" md="4">
         <v-switch color="primary" v-model="data.ephemeral" :label="$t('types.ts.ephemeral')"></v-switch>

@@ -166,7 +166,7 @@ export default {
           const listenPort = this.endpoint.listen_port ?? RandomUtil.randomIntRange(10000, 60000)
           prevConfig = {
             tag: tag,
-            wireguard_schema: 2,
+            wireguard_schema: 3,
             listen_port: listenPort,
             address: ['10.66.66.1/32', 'fd66:66:66::1/128'],
             tunnel_ipv4_cidr: '10.66.66.0/24',
@@ -174,6 +174,7 @@ export default {
             advertised_endpoint_host: '',
             advertised_endpoint_port: listenPort,
             peer_to_peer_enabled: false,
+            hub_peer_forwarding_enabled: false,
             default_client_allowed_ips: ['10.66.66.0/24', 'fd66:66:66::/64'],
             default_client_dns: [],
             default_client_mtu: 1420,
@@ -264,6 +265,8 @@ export default {
       this.endpoint.peers.push({
         name: this.$t('types.wg.peer') + ' ' + (this.endpoint.peers.length + 1),
         peer_mode: 'roaming_client',
+        peer_role: 'client',
+        remote_endpoint_mode: 'dynamic',
         public_key: newKeys.public_key,
         client_private_key: newKeys.private_key,
         assigned_ipv4: assignedIPv4,
