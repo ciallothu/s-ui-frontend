@@ -59,7 +59,12 @@
             <thead><tr><th>{{ $t('logsView.time') }}</th><th>{{ $t('analytics.resource') }}</th><th>{{ $t('analytics.user') }}</th><th>{{ $t('analytics.remote') }}</th><th>{{ $t('analytics.event') }}</th></tr></thead>
             <tbody>
               <tr v-for="(item, index) in connectionItems" :key="`${item.timestamp}-${index}`">
-                <td>{{ item.time || formatTime(item.timestamp) }}</td><td>{{ item.resource }}/{{ item.protocol }}[{{ item.tag }}]</td><td>{{ item.user || '—' }}</td><td>{{ item.destination || item.source || item.remote || '—' }}</td><td><v-btn size="small" variant="text" @click="openConnectionLog(item)">{{ $t('analytics.viewLog') }}</v-btn></td>
+                <td>{{ item.time || formatTime(item.timestamp) }}</td><td>{{ item.resource }}/{{ item.protocol }}[{{ item.tag }}]</td><td>{{ item.user || '—' }}</td>
+                <td>
+                  <div>{{ item.destination || item.source || item.remote || '—' }}</div>
+                  <div v-if="connectionMeta(item)" class="text-caption text-medium-emphasis">{{ connectionMeta(item) }}</div>
+                </td>
+                <td><v-btn size="small" variant="text" @click="openConnectionLog(item)">{{ $t('analytics.viewLog') }}</v-btn></td>
               </tr>
             </tbody>
           </v-table>
@@ -74,7 +79,10 @@
                 <td class="text-no-wrap">{{ item.time || formatTime(item.timestamp) }}</td>
                 <td><v-chip size="small" :color="levelColor(item.level)" variant="tonal">{{ item.level }}</v-chip></td>
                 <td>{{ item.user || '—' }}</td><td>{{ item.source || 'system' }}</td>
-                <td class="log-message">{{ item.message }}</td>
+                <td class="log-message">
+                  <div>{{ item.message }}</div>
+                  <div v-if="connectionMeta(item.connection)" class="text-caption text-medium-emphasis">{{ connectionMeta(item.connection) }}</div>
+                </td>
               </tr>
             </tbody>
           </v-table>
@@ -94,8 +102,14 @@
               <td class="text-no-wrap">{{ item.time || formatTime(item.timestamp) }}</td>
               <td>{{ item.resource }}/{{ item.protocol }}[{{ item.tag }}]</td>
               <td>{{ item.user || '—' }}</td>
-              <td>{{ item.destination || '—' }}</td>
-              <td>{{ item.source || '—' }}</td>
+              <td>
+                <div>{{ item.destination || '—' }}</div>
+                <div v-if="endpointMeta(item.destinationInfo)" class="text-caption text-medium-emphasis">{{ endpointMeta(item.destinationInfo) }}</div>
+              </td>
+              <td>
+                <div>{{ item.source || '—' }}</div>
+                <div v-if="endpointMeta(item.sourceInfo)" class="text-caption text-medium-emphasis">{{ endpointMeta(item.sourceInfo) }}</div>
+              </td>
               <td class="log-message">{{ item.message }}</td>
             </tr>
           </tbody>
@@ -115,6 +129,10 @@
           <v-col cols="12" md="6"><strong>{{ $t('analytics.destination') }}:</strong> {{ selectedConnection.destination || '—' }}</v-col>
           <v-col cols="12" md="6"><strong>{{ $t('analytics.source') }}:</strong> {{ selectedConnection.source || '—' }}</v-col>
           <v-col cols="12" md="6"><strong>{{ $t('analytics.remote') }}:</strong> {{ selectedConnection.remote || '—' }}</v-col>
+        </v-row>
+        <v-row v-for="section in endpointSections(selectedConnection)" :key="section.title" dense class="mt-3">
+          <v-col cols="12" class="text-subtitle-2">{{ section.title }}</v-col>
+          <v-col v-for="field in section.fields" :key="field.label" cols="12" md="6"><strong>{{ field.label }}:</strong> {{ field.value }}</v-col>
         </v-row>
         <v-divider class="my-4" />
         <div class="text-medium-emphasis mb-2">{{ $t('logsView.message') }}</div>
@@ -196,6 +214,49 @@ const chartOptions: any = { responsive: true, maintainAspectRatio: false, intera
 const bytes = (value: any) => HumanReadable.sizeFormat(Number(value || 0))
 const formatTime = (value: number) => value ? new Date(value * 1000).toLocaleString() : '—'
 const levelColor = (value: string) => ({ DEBUG: 'secondary', INFO: 'info', WARNING: 'warning', ERROR: 'error' } as any)[value] ?? 'default'
+const endpointMeta = (info: any) => {
+  if (!info) return ''
+  const parts = [
+    info.ip || info.host,
+    info.attribution || scopeLabel(info.scope),
+    info.isp,
+  ].filter(Boolean)
+  return parts.join(' · ')
+}
+const connectionMeta = (item: any) => item ? (endpointMeta(item.sourceInfo) || endpointMeta(item.destinationInfo) || endpointMeta(item.remoteInfo)) : ''
+const scopeLabel = (scope: string) => {
+  const key = ({
+    private: 'analytics.scopePrivate',
+    loopback: 'analytics.scopeLoopback',
+    link_local: 'analytics.scopeLinkLocal',
+    multicast: 'analytics.scopeMulticast',
+    reserved: 'analytics.scopeReserved',
+    unspecified: 'analytics.scopeReserved',
+    public: 'analytics.scopePublic',
+    domain: 'analytics.scopeDomain',
+  } as any)[scope] ?? 'analytics.scopeUnknown'
+  return t(key)
+}
+const sameEndpoint = (left: any, right: any) => left && right && left.address === right.address && left.ip === right.ip && left.host === right.host
+const endpointSections = (item: any) => {
+  if (!item) return []
+  const endpoints = [
+    { title: t('analytics.source'), info: item.sourceInfo },
+    { title: t('analytics.destination'), info: item.destinationInfo },
+    { title: t('analytics.remote'), info: item.remoteInfo },
+  ].filter((entry, index, source) => entry.info && source.findIndex(other => sameEndpoint(entry.info, other.info)) === index)
+  return endpoints.map(entry => ({
+    title: entry.title,
+    fields: [
+      { label: t('analytics.ipAddress'), value: entry.info.ip || entry.info.host },
+      { label: t('analytics.ipAttribution'), value: entry.info.attribution || scopeLabel(entry.info.scope) },
+      { label: t('analytics.isp'), value: entry.info.isp },
+      { label: t('analytics.asn'), value: entry.info.asn },
+      { label: t('analytics.country'), value: entry.info.country },
+      { label: t('analytics.network'), value: entry.info.network },
+    ].filter(field => field.value),
+  })).filter(entry => entry.fields.length)
+}
 const openConnections = async (nextResource: string, nextTag: string) => {
   detailTitle.value = `${t('analytics.connectionDetails')} · ${nextResource}/${nextTag}`
   detailVisible.value = true
