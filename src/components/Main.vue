@@ -112,7 +112,7 @@
                       IPv6
                     </v-chip>
                   </v-col>
-                  <v-col cols="3">S-UI</v-col>
+                  <v-col cols="3">S-UI Next</v-col>
                   <v-col cols="9">
                     <v-chip density="compact" color="blue">
                       v{{ tilesData.sys?.appVersion }}

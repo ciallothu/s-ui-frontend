@@ -704,7 +704,7 @@ export default {
     serviceActions: "Быстрые действия",
     restartSingbox: "Перезапустить sing-box",
     restartSingboxSubtitle: "Перезагрузить конфигурацию ядра",
-    restartPanel: "Перезапустить S-UI",
+    restartPanel: "Перезапустить S-UI Next",
     restartPanelSubtitle: "Перезапустить процесс панели",
     serviceUnavailableConfirm: "Сервис будет кратко недоступен. Продолжить?",
     shareLink: "Ссылка",

@@ -703,7 +703,7 @@ export default {
     serviceActions: "Thao tác nhanh",
     restartSingbox: "Khởi động lại sing-box",
     restartSingboxSubtitle: "Tải lại cấu hình lõi",
-    restartPanel: "Khởi động lại S-UI",
+    restartPanel: "Khởi động lại S-UI Next",
     restartPanelSubtitle: "Khởi động lại tiến trình panel",
     serviceUnavailableConfirm: "Dịch vụ sẽ tạm thời không khả dụng. Tiếp tục?",
     shareLink: "Liên kết chia sẻ",
